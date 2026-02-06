@@ -44,6 +44,7 @@ export interface Car {
   id: string;
   member_id: string;
   vin: string;
+  make?: string;
   model: string;
   year: number;
   mileage: number;
@@ -109,21 +110,23 @@ export interface MemberStats {
   created_at: string;
   updated_at: string;
   balance?: number;
-  cars?: {
-    total: number;
-    inInventory: number;
-    sold: number;
-  };
+  member: Profile
+  total_cars: number
+  cars_sold: number
+  total_invested: string
+  total_profit: string
+  profit_ratio: number
+  wallet_balance?: number
   financial?: {
-    totalInvestment: number;
-    totalRevenue: number;
-    totalGrossProfit: number;
-    totalNetProfit: number;
-    totalFranchiseFees: number;
-    totalAdditionalExpenses: number;
-    profitMargin: number;
-    netProfitMargin: number;
-  };
+    totalInvestment: string
+    totalRevenue: string
+    totalGrossProfit: number
+    totalNetProfit: number
+    totalFranchiseFees: number
+    totalAdditionalExpenses: number
+    profitMargin: number
+    netProfitMargin: number
+  }
 }
 
 export interface AuditLog {

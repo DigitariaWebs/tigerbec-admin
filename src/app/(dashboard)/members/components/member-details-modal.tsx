@@ -16,9 +16,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react"
+import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2 } from "lucide-react"
 import { AddFundsModal } from "./add-funds-modal"
 import { AddCarModal } from "./add-car-modal"
+import { EditCarModal } from "./edit-car-modal"
+import { toast } from "sonner"
 
 interface UserDetailsModalProps {
   userId: string | null
@@ -30,6 +32,8 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
   const queryClient = useQueryClient()
   const [showAddFundsModal, setShowAddFundsModal] = useState(false)
   const [showAddCarModal, setShowAddCarModal] = useState(false)
+  const [showEditCarModal, setShowEditCarModal] = useState(false)
+  const [editingCar, setEditingCar] = useState<Car | null>(null)
 
   const { data: user, isLoading: userLoading, error: userError } = useQuery<Profile>({
     queryKey: ['member', userId],
@@ -71,6 +75,24 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const handleDeleteCar = async (carId: string) => {
+    if (!userId || !confirm("Are you sure you want to delete this car? This action cannot be undone.")) return
+
+    try {
+      await membersApi.deleteCar(userId, carId)
+      toast.success("Car deleted successfully")
+      handleRefetch()
+    } catch (error) {
+      console.error("Failed to delete car:", error)
+      toast.error("Failed to delete car")
+    }
+  }
+
+  const handleEditCar = (car: Car) => {
+    setEditingCar(car)
+    setShowEditCarModal(true)
   }
 
   const isLoading = userLoading || statsLoading
@@ -164,6 +186,10 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium text-muted-foreground">Total Investment</p>
                           <p className="text-lg font-semibold">${stats.financial.totalInvestment.toLocaleString()}</p>
+                          <div className="flex items-center gap-2 mt-1 pt-1 border-t border-dashed">
+                            <p className="text-xs font-medium text-muted-foreground">Wallet Balance:</p>
+                            <p className="text-xs font-bold text-primary">${stats.wallet_balance?.toLocaleString() ?? '0.00'}</p>
+                          </div>
                         </div>
                       </div>
 
@@ -319,16 +345,36 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                 ) : (
                   <div className="grid gap-4">
                     {cars.map((car) => (
-                      <div key={car.id} className="flex items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                      <div key={car.id} className="flex items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 group">
                         <div className="rounded-full p-2 bg-primary/10">
                           <CarIcon className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center justify-between">
                             <p className="font-medium">{car.year} {car.model}</p>
-                            <Badge variant={car.status === CarStatus.SOLD ? 'default' : 'secondary'}>
-                              {car.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={car.status === CarStatus.SOLD ? 'default' : 'secondary'}>
+                                {car.status}
+                              </Badge>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleEditCar(car)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteCar(car.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                             <div>
@@ -404,6 +450,15 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
         memberName={user?.name || 'Member'}
         open={showAddCarModal}
         onOpenChange={setShowAddCarModal}
+        onSuccess={handleRefetch}
+      />
+
+      {/* Edit Car Modal */}
+      <EditCarModal
+        memberId={userId}
+        car={editingCar}
+        open={showEditCarModal}
+        onOpenChange={setShowEditCarModal}
         onSuccess={handleRefetch}
       />
     </Dialog>

@@ -118,6 +118,24 @@ export class MembersApi extends BaseApiClient {
       body: JSON.stringify(data),
     });
   }
+  /**
+   * Update a car details
+   */
+  async updateCar(memberId: string, carId: string, data: Partial<Car>): Promise<Car> {
+    return this.request<Car>(`/members/${memberId}/cars/${carId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Delete a car
+   */
+  async deleteCar(memberId: string, carId: string): Promise<void> {
+    return this.request<void>(`/members/${memberId}/cars/${carId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const membersApi = new MembersApi();

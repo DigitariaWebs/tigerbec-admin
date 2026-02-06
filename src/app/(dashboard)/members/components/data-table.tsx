@@ -160,7 +160,7 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
       header: "Date of Birth",
       cell: ({ row }) => {
         const date = row.getValue("date_of_birth") as string
-        return <span className="text-sm">{new Date(date).toLocaleDateString()}</span>
+        return <span className="text-sm">{new Date(date).toLocaleDateString('en-US')}</span>
       },
     },
     {
@@ -176,7 +176,7 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
       header: "Joined Date",
       cell: ({ row }) => {
         const date = row.getValue("created_at") as string
-        return <span className="text-sm">{new Date(date).toLocaleDateString()}</span>
+        return <span className="text-sm">{new Date(date).toLocaleDateString('en-US')}</span>
       },
     },
 
