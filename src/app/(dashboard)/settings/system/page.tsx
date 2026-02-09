@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Percent, Save, Info, Plus, Pencil, Trash2, Megaphone, AlertCircle, Trophy, Bell } from "lucide-react"
+import { Loader2, Percent, Save, Info, Plus, Pencil, Trash2, Megaphone, AlertCircle, Trophy, Bell, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { settingsApi } from "@/lib/api/settings"
 import { announcementsApi, Announcement, CreateAnnouncementDto, UpdateAnnouncementDto } from "@/lib/api/announcements"
+import { adminApi } from "@/lib/api/admins"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -58,6 +59,10 @@ export default function SystemSettingsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [isDeleteProjectDataOpen, setIsDeleteProjectDataOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState("")
+  const [deletePasswordConfirm, setDeletePasswordConfirm] = useState("")
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   // Form state for announcements
   const [formData, setFormData] = useState<CreateAnnouncementDto>({
@@ -88,6 +93,18 @@ export default function SystemSettingsPage() {
       setFranchiseFee(franchiseFeeData.setting_value)
     }
   }, [franchiseFeeData])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const adminData = localStorage.getItem("admin_user")
+      if (!adminData) return
+      const parsed = JSON.parse(adminData)
+      setIsSuperAdmin(parsed?.role === "super_admin")
+    } catch {
+      setIsSuperAdmin(false)
+    }
+  }, [])
 
   // Update franchise fee mutation
   const updateMutation = useMutation({
@@ -143,6 +160,29 @@ export default function SystemSettingsPage() {
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Failed to delete announcement"
+      toast.error(message)
+    },
+  })
+
+  const deleteProjectDataMutation = useMutation({
+    mutationFn: (password: string) => adminApi.deleteProjectData(password),
+    onSuccess: () => {
+      toast.success("Project data deleted successfully")
+      setDeletePassword("")
+      setDeletePasswordConfirm("")
+      setIsDeleteProjectDataOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] })
+      queryClient.invalidateQueries({ queryKey: ["members"] })
+      queryClient.invalidateQueries({ queryKey: ["car-sales"] })
+      queryClient.invalidateQueries({ queryKey: ["inventory-requests"] })
+      queryClient.invalidateQueries({ queryKey: ["fund-requests"] })
+      queryClient.invalidateQueries({ queryKey: ["announcements"] })
+      queryClient.invalidateQueries({ queryKey: ["logs"] })
+      queryClient.invalidateQueries({ queryKey: ["analytics"] })
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to delete project data"
       toast.error(message)
     },
   })
@@ -208,6 +248,25 @@ export default function SystemSettingsPage() {
     if (franchiseFeeData) {
       setFranchiseFee(franchiseFeeData.setting_value)
     }
+  }
+
+  const handleDeleteProjectData = () => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can perform this action")
+      return
+    }
+
+    if (!deletePassword || !deletePasswordConfirm) {
+      toast.error("Please enter and retype your password")
+      return
+    }
+
+    if (deletePassword !== deletePasswordConfirm) {
+      toast.error("Passwords do not match")
+      return
+    }
+
+    deleteProjectDataMutation.mutate(deletePassword)
   }
 
   if (isLoading) {
@@ -422,6 +481,47 @@ export default function SystemSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Danger Zone */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="size-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Permanently delete all project data. This action cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertTriangle className="size-4" />
+            <AlertDescription>
+              This will remove all members, cars, car sales, additional expenses, tasks,
+              requests, events, announcements, and logs. Admin accounts and system settings remain.
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              You must retype your password to confirm deletion.
+            </p>
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteProjectDataOpen(true)}
+              disabled={!isSuperAdmin}
+            >
+              Delete Project Data
+            </Button>
+          </div>
+
+          {!isSuperAdmin && (
+            <p className="text-xs text-muted-foreground">
+              Only super admins can delete project data.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Create/Edit Announcement Dialog */}
       <Dialog
         open={isCreateOpen || !!editingAnnouncement}
@@ -576,6 +676,87 @@ export default function SystemSettingsPage() {
               disabled={deleteMutation.isPending}
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Project Data Dialog */}
+      <Dialog
+        open={isDeleteProjectDataOpen}
+        onOpenChange={(open) => {
+          if (deleteProjectDataMutation.isPending) return
+          setIsDeleteProjectDataOpen(open)
+          if (!open) {
+            setDeletePassword("")
+            setDeletePasswordConfirm("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Entire Project Data</DialogTitle>
+            <DialogDescription>
+              Enter your current password and retype it to confirm permanent deletion.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Password</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-password-confirm">Retype Password</Label>
+              <Input
+                id="delete-password-confirm"
+                type="password"
+                value={deletePasswordConfirm}
+                onChange={(e) => setDeletePasswordConfirm(e.target.value)}
+                placeholder="Retype your password"
+                autoComplete="current-password"
+              />
+            </div>
+
+            {deletePasswordConfirm && deletePassword !== deletePasswordConfirm && (
+              <p className="text-sm text-destructive">Passwords do not match.</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteProjectDataOpen(false)}
+              disabled={deleteProjectDataMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProjectData}
+              disabled={
+                deleteProjectDataMutation.isPending ||
+                !deletePassword ||
+                !deletePasswordConfirm ||
+                deletePassword !== deletePasswordConfirm
+              }
+            >
+              {deleteProjectDataMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Permanently Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

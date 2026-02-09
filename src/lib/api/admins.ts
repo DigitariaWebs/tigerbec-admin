@@ -156,7 +156,7 @@ export class AdminApi extends BaseApiClient {
     });
   }
 
-    async resetPassword(
+  async resetPassword(
     id: string, 
     newPassword: string,
     userType: 'admin' | 'member' = 'admin'
@@ -173,6 +173,22 @@ export class AdminApi extends BaseApiClient {
     return this.request<{ message: string }>(endpoint, {
       method,
       body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Delete all project operational data after password verification (super admin only)
+   */
+  async deleteProjectData(password: string): Promise<{
+    message: string;
+    deleted_counts: Record<string, number>;
+  }> {
+    return this.request<{
+      message: string;
+      deleted_counts: Record<string, number>;
+    }>('/admin/settings/delete-project-data', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
     });
   }
 }

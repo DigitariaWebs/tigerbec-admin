@@ -13,6 +13,7 @@ export { carExpensesApi } from './car-expenses';
 export { logsApi } from './logs';
 export { eventsApi } from './events';
 export { inventoryRequestsApi } from './inventory-requests';
+export { tasksApi } from './tasks';
 
 // For backward compatibility, export a default api object
 import { adminApi } from './admins';

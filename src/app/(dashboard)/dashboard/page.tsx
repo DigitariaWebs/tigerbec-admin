@@ -8,6 +8,7 @@ import { TopProducts } from "./components/top-products"
 import { CustomerInsights } from "./components/customer-insights"
 import { QuickActions } from "./components/quick-actions"
 import { RevenueBreakdown } from "./components/revenue-breakdown"
+import { TasksCard } from "./components/tasks-card"
 import { analyticsApi } from "@/lib/api/analytics"
 import { carSalesApi } from "@/lib/api/car-sales"
 import type { GlobalKPIs, AgeBandAnalytics, MemberProfitData } from "@/types"
@@ -88,7 +89,12 @@ export default function Dashboard2() {
           <TopProducts memberProfitData={dashboardData.memberProfitData} isLoading={isLoading} />
         </div>
 
-        {/* Fourth Row - Customer Insights */}
+        {/* Fourth Row - Tasks */}
+        <div className="grid gap-6 grid-cols-1">
+          <TasksCard />
+        </div>
+
+        {/* Fifth Row - Customer Insights */}
         <CustomerInsights
           ageBandData={dashboardData.ageBandData}
           memberProfitData={dashboardData.memberProfitData}

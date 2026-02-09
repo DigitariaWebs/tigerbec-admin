@@ -84,6 +84,11 @@ const data = {
           icon: Wallet,
         },
         {
+          title: "Tasks",
+          url: "/tasks",
+          icon: CheckSquare,
+        },
+        {
           title: "Calendar",
           url: "/calendar",
           icon: Calendar,

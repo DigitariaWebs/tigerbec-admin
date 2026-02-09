@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { membersApi } from "@/lib/api/members"
 import { Profile, MemberStats, Car, CarStatus } from "@/types"
@@ -16,10 +16,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2 } from "lucide-react"
+import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Receipt } from "lucide-react"
 import { AddFundsModal } from "./add-funds-modal"
 import { AddCarModal } from "./add-car-modal"
 import { EditCarModal } from "./edit-car-modal"
+import { CarExpensesModal } from "./car-expenses-modal"
 import { toast } from "sonner"
 
 interface UserDetailsModalProps {
@@ -33,7 +34,9 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
   const [showAddFundsModal, setShowAddFundsModal] = useState(false)
   const [showAddCarModal, setShowAddCarModal] = useState(false)
   const [showEditCarModal, setShowEditCarModal] = useState(false)
+  const [showCarExpensesModal, setShowCarExpensesModal] = useState(false)
   const [editingCar, setEditingCar] = useState<Car | null>(null)
+  const [selectedCarForExpenses, setSelectedCarForExpenses] = useState<Car | null>(null)
 
   const { data: user, isLoading: userLoading, error: userError } = useQuery<Profile>({
     queryKey: ['member', userId],
@@ -93,6 +96,11 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
   const handleEditCar = (car: Car) => {
     setEditingCar(car)
     setShowEditCarModal(true)
+  }
+
+  const handleManageExpenses = (car: Car) => {
+    setSelectedCarForExpenses(car)
+    setShowCarExpensesModal(true)
   }
 
   const isLoading = userLoading || statsLoading
@@ -360,6 +368,14 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => handleManageExpenses(car)}
+                                >
+                                  <Receipt className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                   onClick={() => handleEditCar(car)}
                                 >
@@ -461,6 +477,24 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
         onOpenChange={setShowEditCarModal}
         onSuccess={handleRefetch}
       />
+
+      {/* Manage Car Expenses Modal */}
+      {selectedCarForExpenses && (
+        <CarExpensesModal
+          open={showCarExpensesModal}
+          onOpenChange={(open) => {
+            setShowCarExpensesModal(open)
+            if (!open) {
+              setSelectedCarForExpenses(null)
+            }
+          }}
+          carId={selectedCarForExpenses.id}
+          carName={`${selectedCarForExpenses.year} ${selectedCarForExpenses.make || ""} ${selectedCarForExpenses.model}`.trim()}
+          purchasePrice={Number.parseFloat(selectedCarForExpenses.purchase_price) || 0}
+          carStatus={selectedCarForExpenses.status}
+          onSuccess={handleRefetch}
+        />
+      )}
     </Dialog>
   )
 }

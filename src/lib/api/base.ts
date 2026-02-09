@@ -47,11 +47,41 @@ export class BaseApiClient {
     console.log('[API CLIENT] Response status:', response.status, response.statusText);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'An error occurred',
-      }));
-      console.error('[API CLIENT] Error response:', error);
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const contentType = response.headers.get('content-type') || '';
+      let errorBody: unknown = null;
+      let fallbackMessage = `HTTP ${response.status}`;
+
+      if (contentType.includes('application/json')) {
+        errorBody = await response.json().catch(() => null);
+      } else {
+        const textBody = await response.text().catch(() => '');
+        errorBody = textBody || null;
+      }
+
+      if (typeof errorBody === 'string' && errorBody.trim()) {
+        fallbackMessage = errorBody;
+      } else if (
+        errorBody &&
+        typeof errorBody === 'object' &&
+        'message' in (errorBody as Record<string, unknown>)
+      ) {
+        const message = (errorBody as Record<string, unknown>).message;
+        if (Array.isArray(message)) {
+          fallbackMessage = message.join(', ');
+        } else if (typeof message === 'string' && message.trim()) {
+          fallbackMessage = message;
+        }
+      }
+
+      console.error('[API CLIENT] Error response:', {
+        url: `${this.baseURL}${endpoint}`,
+        method: options.method || 'GET',
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+        message: fallbackMessage,
+      });
+      throw new Error(fallbackMessage);
     }
 
     const result = await response.json();
