@@ -114,6 +114,11 @@ export function DataTable({ requests, isLoading, statusFilter, onViewDetails }: 
               {requests.map((request) => {
                 const config = statusConfig[request.status]
                 const StatusIcon = config.icon
+                const isWithdrawal =
+                  request.amount < 0 ||
+                  (typeof request.notes === 'string' &&
+                    request.notes.trim().toUpperCase().startsWith('[WITHDRAWAL]'))
+                const displayAmount = isWithdrawal ? -Math.abs(request.amount) : request.amount
 
                 return (
                   <TableRow key={request.id}>
@@ -124,10 +129,12 @@ export function DataTable({ requests, isLoading, statusFilter, onViewDetails }: 
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
-                      ${request.amount.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      <span className={isWithdrawal ? "text-red-600" : undefined}>
+                        ${displayAmount.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge variant={config.variant} className={config.className}>

@@ -6,11 +6,9 @@ import {
   type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
-  type Row,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
@@ -84,18 +82,42 @@ interface UserFormValues {
 
 interface DataTableProps {
   users: User[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    from: number
+    to: number
+  }
+  search: string
+  isLoading?: boolean
+  onSearchChange: (value: string) => void
+  onPageChange: (page: number) => void
+  onLimitChange: (limit: number) => void
   onDeleteUser: (id: string) => void
   onEditUser: (user: User) => void
   onAddUser: (userData: UserFormValues) => void
   onModifyMember: (id: string, data: MemberEditFormValues) => Promise<void>
 }
 
-export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModifyMember }: DataTableProps) {
+export function DataTable({
+  users,
+  pagination,
+  search,
+  isLoading,
+  onSearchChange,
+  onPageChange,
+  onLimitChange,
+  onDeleteUser,
+  onEditUser,
+  onAddUser,
+  onModifyMember,
+}: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState("")
 
   // Modal states
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -287,18 +309,15 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-      globalFilter,
     },
   })
 
@@ -310,8 +329,8 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search users..."
-              value={globalFilter ?? ""}
-              onChange={(event) => setGlobalFilter(String(event.target.value))}
+              value={search}
+              onChange={(event) => onSearchChange(String(event.target.value))}
               className="pl-9"
             />
           </div>
@@ -414,13 +433,13 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
             Show
           </Label>
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${pagination.limit}`}
             onValueChange={(value) => {
-              table.setPageSize(Number(value))
+              onLimitChange(Number(value))
             }}
           >
             <SelectTrigger className="w-20 cursor-pointer" id="page-size">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={pagination.limit} />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -432,16 +451,14 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
           </Select>
         </div>
         <div className="flex-1 text-sm text-muted-foreground hidden sm:block">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {table.getFilteredSelectedRowModel().rows.length} of {pagination.total} member(s) selected.
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="hidden sm:block">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-medium">Page</p>
               <strong className="text-sm">
-                {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                {pagination.page} of {Math.max(1, pagination.totalPages)}
               </strong>
             </div>
           </div>
@@ -449,8 +466,8 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
             <Button
               variant="outline"
               size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
+              disabled={pagination.page <= 1}
               className="cursor-pointer"
             >
               Previous
@@ -458,8 +475,8 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
             <Button
               variant="outline"
               size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={() => onPageChange(Math.min(pagination.totalPages, pagination.page + 1))}
+              disabled={pagination.page >= pagination.totalPages}
               className="cursor-pointer"
             >
               Next
@@ -467,6 +484,10 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser, onModify
           </div>
         </div>
       </div>
+
+      {isLoading && (
+        <p className="text-sm text-muted-foreground">Loading members...</p>
+      )}
 
       {/* Modals */}
       <UserDetailsModal

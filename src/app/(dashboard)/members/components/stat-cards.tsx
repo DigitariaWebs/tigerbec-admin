@@ -15,9 +15,8 @@ export function StatCards() {
   useEffect(() => {
     const fetchTotalUsers = async () => {
       try {
-        const members = await membersApi.getAll()
-        const memberList = Array.isArray(members) ? members : (members as { data?: unknown[] }).data || []
-        setTotalUsers(memberList.length)
+        const response = await membersApi.list({ page: 1, limit: 1 })
+        setTotalUsers(response.pagination.total)
       } catch (error) {
         console.error("Failed to fetch members count:", error)
       } finally {

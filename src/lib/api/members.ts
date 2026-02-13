@@ -6,12 +6,47 @@
 import { BaseApiClient } from './base';
 import type { Profile, Car, MemberStats } from '@/types';
 
+export interface MembersListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: 'newest' | 'oldest' | 'name_asc' | 'name_desc';
+  status?: 'active' | 'inactive' | 'all';
+}
+
+export interface MembersListResponse {
+  data: Profile[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    from: number;
+    to: number;
+  };
+}
+
 export class MembersApi extends BaseApiClient {
+  /**
+   * Get members with server-side pagination/search.
+   */
+  async list(params: MembersListParams = {}): Promise<MembersListResponse> {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.search) query.set('search', params.search);
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.status) query.set('status', params.status);
+
+    const queryString = query.toString();
+    return this.request<MembersListResponse>(`/members${queryString ? `?${queryString}` : ''}`);
+  }
+
   /**
    * Get all members
    */
   async getAll(): Promise<Profile[]> {
-    const response = await this.request<{ data: Profile[] }>('/members');
+    const response = await this.request<MembersListResponse>('/members');
     return response.data;
   }
 
@@ -96,6 +131,16 @@ export class MembersApi extends BaseApiClient {
    */
   async addFunds(memberId: string, data: { amount: number; notes?: string }): Promise<unknown> {
     return this.request<unknown>(`/members/${memberId}/funds`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Admin removes funds from a member (auto-approved withdrawal adjustment)
+   */
+  async removeFunds(memberId: string, data: { amount: number; notes?: string }): Promise<unknown> {
+    return this.request<unknown>(`/members/${memberId}/funds/remove`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

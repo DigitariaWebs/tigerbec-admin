@@ -16,11 +16,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Receipt } from "lucide-react"
+import { User, Mail, Calendar, Clock, Car as CarIcon, Phone, DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Receipt, MinusCircle } from "lucide-react"
 import { AddFundsModal } from "./add-funds-modal"
+import { RemoveFundsModal } from "./remove-funds-modal"
 import { AddCarModal } from "./add-car-modal"
 import { EditCarModal } from "./edit-car-modal"
 import { CarExpensesModal } from "./car-expenses-modal"
+import { MarkCarSoldModal } from "./mark-car-sold-modal"
 import { toast } from "sonner"
 
 interface UserDetailsModalProps {
@@ -32,11 +34,14 @@ interface UserDetailsModalProps {
 export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModalProps) {
   const queryClient = useQueryClient()
   const [showAddFundsModal, setShowAddFundsModal] = useState(false)
+  const [showRemoveFundsModal, setShowRemoveFundsModal] = useState(false)
   const [showAddCarModal, setShowAddCarModal] = useState(false)
   const [showEditCarModal, setShowEditCarModal] = useState(false)
   const [showCarExpensesModal, setShowCarExpensesModal] = useState(false)
+  const [showMarkCarSoldModal, setShowMarkCarSoldModal] = useState(false)
   const [editingCar, setEditingCar] = useState<Car | null>(null)
   const [selectedCarForExpenses, setSelectedCarForExpenses] = useState<Car | null>(null)
+  const [selectedCarForSale, setSelectedCarForSale] = useState<Car | null>(null)
 
   const { data: user, isLoading: userLoading, error: userError } = useQuery<Profile>({
     queryKey: ['member', userId],
@@ -103,6 +108,11 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
     setShowCarExpensesModal(true)
   }
 
+  const handleMarkCarSold = (car: Car) => {
+    setSelectedCarForSale(car)
+    setShowMarkCarSoldModal(true)
+  }
+
   const isLoading = userLoading || statsLoading
 
   return (
@@ -166,6 +176,15 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setShowRemoveFundsModal(true)}
+                  className="flex items-center gap-1"
+                >
+                  <MinusCircle className="h-4 w-4" />
+                  Remove Funds
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowAddCarModal(true)}
                   className="flex items-center gap-1"
                 >
@@ -196,7 +215,9 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                           <p className="text-lg font-semibold">${stats.financial.totalInvestment.toLocaleString()}</p>
                           <div className="flex items-center gap-2 mt-1 pt-1 border-t border-dashed">
                             <p className="text-xs font-medium text-muted-foreground">Wallet Balance:</p>
-                            <p className="text-xs font-bold text-primary">${stats.wallet_balance?.toLocaleString() ?? '0.00'}</p>
+                            <p className="text-xs font-bold text-primary">
+                              ${(stats.balance ?? stats.wallet_balance ?? 0).toLocaleString()}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -365,6 +386,16 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
                                 {car.status}
                               </Badge>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {car.status !== CarStatus.SOLD && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    onClick={() => handleMarkCarSold(car)}
+                                  >
+                                    <DollarSign className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -460,6 +491,14 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
         onSuccess={handleRefetch}
       />
 
+      <RemoveFundsModal
+        memberId={userId}
+        memberName={user?.name || 'Member'}
+        open={showRemoveFundsModal}
+        onOpenChange={setShowRemoveFundsModal}
+        onSuccess={handleRefetch}
+      />
+
       {/* Add Car Modal */}
       <AddCarModal
         memberId={userId}
@@ -495,6 +534,19 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
           onSuccess={handleRefetch}
         />
       )}
+
+      <MarkCarSoldModal
+        memberId={userId}
+        car={selectedCarForSale}
+        open={showMarkCarSoldModal}
+        onOpenChange={(open) => {
+          setShowMarkCarSoldModal(open)
+          if (!open) {
+            setSelectedCarForSale(null)
+          }
+        }}
+        onSuccess={handleRefetch}
+      />
     </Dialog>
   )
 }

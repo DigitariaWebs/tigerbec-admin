@@ -37,9 +37,16 @@ export function FundRequestDetailsModal({ isOpen, onClose, request }: FundReques
 
   const statusInfo = statusConfig[request.status]
   const isPending = request.status === 'pending'
+  const isWithdrawal =
+    request.amount < 0 ||
+    (typeof request.notes === 'string' &&
+      request.notes.trim().toUpperCase().startsWith('[WITHDRAWAL]'))
+  const displayAmount = isWithdrawal ? -Math.abs(request.amount) : request.amount
 
   const handleApprove = async () => {
-    if (!confirm(`Are you sure you want to approve this fund request? $${request.amount.toFixed(2)} will be added to the member's balance.`)) {
+    const absAmount = Math.abs(displayAmount).toFixed(2)
+    const verb = displayAmount < 0 ? "removed from" : "added to"
+    if (!confirm(`Are you sure you want to approve this fund request? $${absAmount} will be ${verb} the member's balance.`)) {
       return
     }
 
@@ -117,8 +124,8 @@ export function FundRequestDetailsModal({ isOpen, onClose, request }: FundReques
                 <DollarSign className="h-4 w-4" />
                 Amount Requested
               </div>
-              <span className="font-bold text-2xl">
-                ${request.amount.toLocaleString('en-US', { 
+              <span className={`font-bold text-2xl ${isWithdrawal ? "text-red-600" : ""}`}>
+                ${displayAmount.toLocaleString('en-US', { 
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2 
                 })}

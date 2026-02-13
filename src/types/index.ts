@@ -9,8 +9,8 @@ export enum AdminRole {
 }
 
 export enum CarStatus {
-  INVENTORY = 'inventory',
-  SOLD = 'sold',
+  IN_STOCK = 'IN_STOCK',
+  SOLD = 'SOLD',
 }
 
 export interface Profile {
