@@ -24,7 +24,7 @@ export class BaseApiClient {
     console.log('[API CLIENT] Request:', options.method || 'GET', endpoint);
     const token = await this.getAuthToken();
     console.log('[API CLIENT] Auth token:', token ? 'Present' : 'None');
-    
+
     const headers: Record<string, string> = {
       ...(options.headers as Record<string, string>),
     };
@@ -84,21 +84,38 @@ export class BaseApiClient {
       throw new Error(fallbackMessage);
     }
 
-    const result = await response.json();
-    console.log('[API CLIENT] Success response:', result);
-    return result;
+    // Check for empty response
+    const contentLength = response.headers.get('content-length');
+    if (contentLength === '0') {
+      return {} as T;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return {} as T;
+    }
+
+    try {
+      const result = JSON.parse(text);
+      console.log('[API CLIENT] Success response:', result);
+      return result;
+    } catch (e) {
+      console.error('[API CLIENT] Failed to parse JSON response:', e);
+      // Return text as fallback if it's not JSON
+      return text as unknown as T;
+    }
   }
 
   protected async downloadBlob(endpoint: string): Promise<Blob> {
     const token = await this.getAuthToken();
-    
+
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${this.baseURL}${endpoint}`, { headers });
-    
+
     if (!response.ok) {
       throw new Error('Failed to download file');
     }

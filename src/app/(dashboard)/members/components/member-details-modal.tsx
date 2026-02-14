@@ -94,7 +94,8 @@ export function UserDetailsModal({ userId, open, onOpenChange }: UserDetailsModa
       handleRefetch()
     } catch (error) {
       console.error("Failed to delete car:", error)
-      toast.error("Failed to delete car")
+      const message = error instanceof Error ? error.message : "Failed to delete car"
+      toast.error(message)
     }
   }
 
